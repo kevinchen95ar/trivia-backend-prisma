@@ -46,7 +46,7 @@ model Question {
 
 model Category {
   id       String     @id @default(uuid())
-  category String
+  category String     @unique
   Question Question[]
   Source   Source     @relation(fields: [sourceId], references: [id])
   sourceId String
@@ -62,7 +62,7 @@ model Answer {
 
 model Difficulty {
   id         String     @id @default(uuid())
-  difficulty String
+  difficulty String     @unique
   score      Int
   Question   Question[]
 }

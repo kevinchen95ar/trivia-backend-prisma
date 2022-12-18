@@ -40,3 +40,14 @@ export const getAllCategories = async () => {
   });
   return dbCategories;
 };
+
+export const getCategoryIdByCategory = async (category: string) => {
+  const categoryId = await prisma.category.findUnique({
+    where: { category: category },
+    select: { id: true },
+  });
+  if (categoryId) {
+    return categoryId.id;
+  }
+  return;
+};

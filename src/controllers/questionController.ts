@@ -1,5 +1,13 @@
-import { getAllQuestions } from "./../services/questionService";
-const axios = require("axios").default;
+import {
+  createQuestion,
+  getAllQuestions,
+  getQuestionFromSource,
+} from "./../services/questionService";
+import {
+  getCategoriesFromSource,
+  getCategoryIdByCategory,
+} from "./../services/categoryService";
+import { getDifficultyIdByDifficulty } from "../services/difficultyService";
 
 //GET - Trae la cantidad de preguntas por categoria y dificultad
 export const getAvailableQuestionQuantity = async (req: any, res: any) => {
@@ -51,74 +59,78 @@ export const getAvailableQuestionQuantity = async (req: any, res: any) => {
   res.json(questionsAvailable);
 };
 
-//TODO:
-//UPDATE - Traemos de la API de opentdb las preguntas con los parametros que le pasemos
+//UPDATE - Traemos de la API de opentdb las preguntas con los parametros que le pasemos, no se guardan las repetidas
 export const updateQuestionsAvailable = async (req: any, res: any) => {
-  //  try {
-  //     const { category, difficulty, quantity } = req.body;
-  //     const url = "https://opentdb.com/api_category.php";
-  //     const idCategory = await axios
-  //       //traemos de opentdb todas las categorias`
-  //       .get(url)
-  //       .then(
-  //         // comparamos la categoria del body con todas las de opentdb para sacar el id
-  //         (res) => {
-  //           var id = 0;
-  //           res.data.trivia_categories.forEach((e) => {
-  //             if (e.name === category) {
-  //               id = e.id;
-  //             }
-  //           });
-  //           //Error al encontrar la categoria
-  //           if (id === 0) {
-  //             return res.status(409).send("No se encontro la categoria.");
-  //           }
-  //           return id;
-  //         }
-  //       );
-  //     // El link de las preguntas con los parametros.
-  //     const questionURL = `https://opentdb.com/api.php?amount=${quantity}&category=${idCategory}&difficulty=${difficulty}`;
-  //     //guardamos las preguntas en la db -- FALTA HACER, parecido al UPDATEALLCATEGORIES
-  //     //UPDATE ALL CATEGORIES ACA ARRANCA
-  //     const dbQuestions = await pool.query("SELECT * FROM question");
-  //     const allLength = dbQuestions.rows.length;
-  //     // Colocamos todas las question en un array simple sin los id para poder comparar con include
-  //     var allQuestions = [];
-  //     for (var i = 0; i < allLength; i++) {
-  //       allQuestions.push(dbQuestions.rows[i].question);
-  //     }
-  //     //Creamos un array que tendra solo las question no repetidas
-  //     var newQuestions = [];
-  //     await axios
-  //       .get(questionURL)
-  //       .then((res) => {
-  //         const length = res.data.results.length;
-  //         for (var i = 0; i < length; i++) {
-  //           //Chequeamos que si ya existe esa pregunta, si no existe la insertamos en el array
-  //           if (!allQuestions.includes(res.data.results[i].question)) {
-  //             newQuestions.push(res.data.results[i]);
-  //           }
-  //         }
-  //       })
-  //       .catch((err) => {
-  //         console.log(err);
-  //       });
-  //     // Guardamos en la base de datos las nuevas preguntas
-  //     const newLength = newQuestions.length;
-  //     if (newLength !== 0) {
-  //       for (var i = 0; i < newLength; i++) {
-  //         // hay que buscar el idcategory y el iddifficulty en la db -- FALTA HACER
-  //         await pool.query(
-  //           "INSERT INTO question (questiontype, question, idcategory, iddifficulty) VALUES ($1, $2, $3, $4) RETURNING *",
-  //           [newQuestions[i].questiontype, opentdbID] // ACA FALTA TMB
-  //         );
-  //         // TAMBIEN HAY QUE INSERTAR LAS ANSWER Y RELACIONARLA CON LA QUESTION
-  //       }
-  //     }
-  //     //ACA TERMINA
-  //   } catch (error) {
-  //     res.json({ error: error.message });
-  //   }
+  try {
+    const { category, difficulty, quantity, source } = req.body;
+
+    if (!(category && difficulty && quantity && source)) {
+      return res.json("Faltan datos");
+    }
+
+    // traemos las categorias de la source
+    const sourceCategories = await getCategoriesFromSource(source);
+
+    // buscamos el id de la categoria en cuestion
+    var idCategory = "";
+    const sourceLength = sourceCategories.length;
+    for (var i = 0; i < sourceLength; i++) {
+      if (sourceCategories[i].name === category) {
+        idCategory = sourceCategories[i].id;
+      }
+    }
+
+    if (idCategory === "") {
+      return res.json("No se encontro la categoria.");
+    }
+
+    // Traemos las preguntas de la source especificada
+    const questions = await getQuestionFromSource(
+      quantity,
+      idCategory,
+      difficulty,
+      source
+    );
+
+    if (questions.length === 0) {
+      return res.json(
+        "No se encontraron preguntas con los parametros ingresados."
+      );
+    }
+
+    //buscamos la categoryid y la dificulty id en nuestra bd
+    const categoryId = await getCategoryIdByCategory(category);
+    const difficultyId = await getDifficultyIdByDifficulty(difficulty);
+
+    if (!(categoryId && difficultyId)) {
+      return res.json("error");
+    }
+
+    //guardamos las preguntas y respuestas en la base de datos y contamos si hay repetidas
+    const questionsLength = questions.length;
+    var repetidas = 0;
+    for (var i = 0; i < questionsLength; i++) {
+      const createdQuestion = await createQuestion(
+        categoryId,
+        difficultyId,
+        questions[i].type,
+        questions[i].question,
+        questions[i].correct_answer,
+        questions[i].incorrect_answers
+      );
+      if (!createdQuestion) {
+        repetidas++;
+      }
+    }
+
+    res.json(
+      `Creacion Exitosa. De las ${quantity} preguntas solicitadas se encontraron ${repetidas} repetidas. Se añadieron ${
+        quantity - repetidas
+      }`
+    );
+  } catch (error) {
+    res.json(error);
+  }
 };
 
-//GET getRandomQuestions - Nos devuelve un array de preguntas aleatorias no repetidas
+//GET getRandomQuestions - Nos devuelve un array de preguntas aleatorias
