@@ -69,11 +69,12 @@ model Difficulty {
 
 model Source {
   id       String     @id @default(uuid())
-  source   String
+  source   String     @unique
   Category Category[]
 }
 
 enum Role {
   BASIC
   ADMIN
+  EDITOR
 }
