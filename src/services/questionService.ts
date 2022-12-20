@@ -11,7 +11,30 @@ export const getAllQuestions = async () => {
       Difficulty: true,
       Category: true,
       Answer: true,
-      Trivia: true,
+    },
+  });
+
+  return allQuestions;
+};
+
+export const getQuestionsByDifCat = async (
+  difficulty: string,
+  category: string
+) => {
+  const allQuestions = await prisma.question.findMany({
+    select: {
+      id: true,
+      questionType: true,
+      question: true,
+      Answer: true,
+    },
+    where: {
+      Difficulty: {
+        difficulty: difficulty,
+      },
+      Category: {
+        category: category,
+      },
     },
   });
 
@@ -72,4 +95,22 @@ export const createQuestion = async (
   }
 
   return questionId;
+};
+
+export const connectQuestionWithTrivia = async (
+  questionId: string,
+  triviaId: string
+) => {
+  const connected = await prisma.question.update({
+    where: {
+      id: questionId,
+    },
+    data: {
+      Trivia: {
+        connect: { id: triviaId },
+      },
+    },
+  });
+
+  return connected;
 };

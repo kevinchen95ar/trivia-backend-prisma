@@ -19,17 +19,15 @@ model User {
 }
 
 model Trivia {
-  id               String     @id @default(uuid())
-  triviaDate       DateTime   @default(now())
-  score            Float
-  triviaTime       Int
-  timeAvailable    Int
-  correctAnswers   Int
-  incorrectAnswers Int
-  amountQuestions  Int
-  User             User       @relation(fields: [userId], references: [id])
-  userId           String
-  Question         Question[]
+  id            String     @id @default(uuid())
+  triviaDate    DateTime   @default(now())
+  score         Float
+  triviaTime    Int
+  timeAvailable Int
+  userAnswers   String[]
+  User          User       @relation(fields: [userId], references: [id])
+  userId        String
+  Question      Question[]
 }
 
 model Question {

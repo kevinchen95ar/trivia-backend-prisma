@@ -2,61 +2,67 @@ import {
   createQuestion,
   getAllQuestions,
   getQuestionFromSource,
+  getQuestionsByDifCat,
 } from "./../services/questionService";
 import {
   getCategoriesFromSource,
   getCategoryIdByCategory,
 } from "./../services/categoryService";
 import { getDifficultyIdByDifficulty } from "../services/difficultyService";
+import { Answer } from "@prisma/client";
 
 //GET - Trae la cantidad de preguntas por categoria y dificultad
 export const getAvailableQuestionQuantity = async (req: any, res: any) => {
-  //Traemos todas las preguntas de la db y la almacenamos en un array
-  const dbQuestions = await getAllQuestions();
+  try {
+    //Traemos todas las preguntas de la db y la almacenamos en un array
+    const dbQuestions = await getAllQuestions();
 
-  //Creamos un array questionsAvailable que sus elementos tienen como atributos la categoria, dificultad y cantidad
-  //Inicializamos con el primer elemento
-  const questionsAvailable = [
-    {
-      id: 1,
-      category: dbQuestions[0].Category.category,
-      difficulty: dbQuestions[0].Difficulty.difficulty,
-      quantity: 1,
-    },
-  ];
+    //Creamos un array questionsAvailable que sus elementos tienen como atributos la categoria, dificultad y cantidad
+    //Inicializamos con el primer elemento
+    const questionsAvailable = [
+      {
+        id: 1,
+        category: dbQuestions[0].Category.category,
+        difficulty: dbQuestions[0].Difficulty.difficulty,
+        quantity: 1,
+      },
+    ];
 
-  var QAid = 2;
-  const length = dbQuestions.length;
-  //Recorremos las preguntas de la db una por una y comparamos con questionAvailable
-  for (var i = 1; i < length; i++) {
-    var availableLength = questionsAvailable.length;
-    var nuevo = true;
-    for (var j = 0; j < availableLength; j++) {
-      //Si coincide con un elemento sumamos a la cantidad
-      if (
-        dbQuestions[i].Category.category === questionsAvailable[j].category &&
-        dbQuestions[i].Difficulty.difficulty ===
-          questionsAvailable[j].difficulty
-      ) {
-        questionsAvailable[j].quantity++;
-        nuevo = false;
+    var QAid = 2;
+    const length = dbQuestions.length;
+    //Recorremos las preguntas de la db una por una y comparamos con questionAvailable
+    for (var i = 1; i < length; i++) {
+      var availableLength = questionsAvailable.length;
+      var nuevo = true;
+      for (var j = 0; j < availableLength; j++) {
+        //Si coincide con un elemento sumamos a la cantidad
+        if (
+          dbQuestions[i].Category.category === questionsAvailable[j].category &&
+          dbQuestions[i].Difficulty.difficulty ===
+            questionsAvailable[j].difficulty
+        ) {
+          questionsAvailable[j].quantity++;
+          nuevo = false;
+        }
+      }
+      //Si no coincide con un elemento creamos un nuevo elemento.
+      if (nuevo) {
+        var category = dbQuestions[i].Category.category;
+        var difficulty = dbQuestions[i].Difficulty.difficulty;
+        questionsAvailable.push({
+          id: QAid,
+          category: category,
+          difficulty: difficulty,
+          quantity: 1,
+        });
+        QAid++;
       }
     }
-    //Si no coincide con un elemento creamos un nuevo elemento.
-    if (nuevo) {
-      var category = dbQuestions[i].Category.category;
-      var difficulty = dbQuestions[i].Difficulty.difficulty;
-      questionsAvailable.push({
-        id: QAid,
-        category: category,
-        difficulty: difficulty,
-        quantity: 1,
-      });
-      QAid++;
-    }
+    // Devolvemos el array questionsAvailable
+    res.json(questionsAvailable);
+  } catch (error) {
+    res.json(error);
   }
-  // Devolvemos el array questionsAvailable
-  res.json(questionsAvailable);
 };
 
 //UPDATE - Traemos de la API de opentdb las preguntas con los parametros que le pasemos, no se guardan las repetidas
@@ -133,4 +139,45 @@ export const updateQuestionsAvailable = async (req: any, res: any) => {
   }
 };
 
-//GET getRandomQuestions - Nos devuelve un array de preguntas aleatorias
+const randomIntFromInterval = (min: number, max: number) => {
+  // min and max included
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+//GET - Nos devuelve un array de preguntas aleatorias con los parametros indicados
+export const getRandomQuestions = async (req: any, res: any) => {
+  try {
+    const { quantity, difficulty, category } = req.body;
+
+    console.log(req.body);
+
+    //Traemos las preguntas con la dificultad y categoria seleccionadas
+    const dbQuestions = await getQuestionsByDifCat(difficulty, category);
+
+    if (dbQuestions.length < quantity) {
+      return res.json(
+        "No hay suficientes preguntas para la cantidad requerida."
+      );
+    }
+
+    //Seleccionamos la cantidad de preguntas aleatoriamente
+    var questions: {
+      id: string;
+      questionType: string;
+      question: string;
+      Answer: Answer[];
+    }[] = [];
+    var i = 0;
+    do {
+      const index = randomIntFromInterval(0, dbQuestions.length - 1);
+      if (!questions.includes(dbQuestions[index])) {
+        questions.push(dbQuestions[index]);
+        i++;
+      }
+    } while (i < quantity);
+    //devolvemos el array.
+    res.json(questions);
+  } catch (error) {
+    res.json(error);
+  }
+};

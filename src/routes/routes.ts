@@ -6,8 +6,10 @@ import {
 import { getAllDifficultyInDB } from "../controllers/difficultyController";
 import {
   getAvailableQuestionQuantity,
+  getRandomQuestions,
   updateQuestionsAvailable,
 } from "../controllers/questionController";
+import { getAllTrivia, registerTrivia } from "../controllers/triviaController";
 import {
   registerUser,
   loginUser,
@@ -33,5 +35,10 @@ router.get("/difficulty/all", getAllDifficultyInDB);
 //Question routes
 router.get("/question/quantity/all", getAvailableQuestionQuantity);
 router.put("/question", updateQuestionsAvailable);
+router.put("/question/get", getRandomQuestions);
+
+//Trivia routes
+router.get("/trivia/get/all", getAllTrivia);
+router.post("/trivia/create", registerTrivia);
 
 export default router;
