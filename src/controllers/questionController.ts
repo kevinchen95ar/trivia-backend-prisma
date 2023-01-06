@@ -1,63 +1,21 @@
 import {
-  createQuestion,
-  getAllQuestions,
+  getAvailableQuestionService,
   getQuestionFromSource,
   getQuestionsByDifCat,
+  saveQuestionsToDB,
+  selectRandomQuestions,
 } from "./../services/questionService";
 import {
   getCategoriesFromSource,
   getCategoryIdByCategory,
+  getIDCategoryFromCategoriesSourceByCategory,
 } from "./../services/categoryService";
 import { getDifficultyIdByDifficulty } from "../services/difficultyService";
-import { Answer } from "@prisma/client";
 
 //GET - Trae la cantidad de preguntas por categoria y dificultad
 export const getAvailableQuestionQuantity = async (req: any, res: any) => {
   try {
-    //Traemos todas las preguntas de la db y la almacenamos en un array
-    const dbQuestions = await getAllQuestions();
-
-    //Creamos un array questionsAvailable que sus elementos tienen como atributos la categoria, dificultad y cantidad
-    //Inicializamos con el primer elemento
-    const questionsAvailable = [
-      {
-        id: 1,
-        category: dbQuestions[0].Category.category,
-        difficulty: dbQuestions[0].Difficulty.difficulty,
-        quantity: 1,
-      },
-    ];
-
-    var QAid = 2;
-    const length = dbQuestions.length;
-    //Recorremos las preguntas de la db una por una y comparamos con questionAvailable
-    for (var i = 1; i < length; i++) {
-      var availableLength = questionsAvailable.length;
-      var nuevo = true;
-      for (var j = 0; j < availableLength; j++) {
-        //Si coincide con un elemento sumamos a la cantidad
-        if (
-          dbQuestions[i].Category.category === questionsAvailable[j].category &&
-          dbQuestions[i].Difficulty.difficulty ===
-            questionsAvailable[j].difficulty
-        ) {
-          questionsAvailable[j].quantity++;
-          nuevo = false;
-        }
-      }
-      //Si no coincide con un elemento creamos un nuevo elemento.
-      if (nuevo) {
-        var category = dbQuestions[i].Category.category;
-        var difficulty = dbQuestions[i].Difficulty.difficulty;
-        questionsAvailable.push({
-          id: QAid,
-          category: category,
-          difficulty: difficulty,
-          quantity: 1,
-        });
-        QAid++;
-      }
-    }
+    const questionsAvailable = await getAvailableQuestionService();
     // Devolvemos el array questionsAvailable
     res.json(questionsAvailable);
   } catch (error) {
@@ -78,13 +36,10 @@ export const updateQuestionsAvailable = async (req: any, res: any) => {
     const sourceCategories = await getCategoriesFromSource(source);
 
     // buscamos el id de la categoria en cuestion
-    var idCategory = "";
-    const sourceLength = sourceCategories.length;
-    for (var i = 0; i < sourceLength; i++) {
-      if (sourceCategories[i].name === category) {
-        idCategory = sourceCategories[i].id;
-      }
-    }
+    const idCategory = await getIDCategoryFromCategoriesSourceByCategory(
+      sourceCategories,
+      category
+    );
 
     if (idCategory === "") {
       return res.json("No se encontro la categoria.");
@@ -113,21 +68,11 @@ export const updateQuestionsAvailable = async (req: any, res: any) => {
     }
 
     //guardamos las preguntas y respuestas en la base de datos y contamos si hay repetidas
-    const questionsLength = questions.length;
-    var repetidas = 0;
-    for (var i = 0; i < questionsLength; i++) {
-      const createdQuestion = await createQuestion(
-        categoryId,
-        difficultyId,
-        questions[i].type,
-        questions[i].question,
-        questions[i].correct_answer,
-        questions[i].incorrect_answers
-      );
-      if (!createdQuestion) {
-        repetidas++;
-      }
-    }
+    const repetidas = await saveQuestionsToDB(
+      questions,
+      categoryId,
+      difficultyId
+    );
 
     res.json(
       `Creacion Exitosa. De las ${quantity} preguntas solicitadas se encontraron ${repetidas} repetidas. Se añadieron ${
@@ -137,11 +82,6 @@ export const updateQuestionsAvailable = async (req: any, res: any) => {
   } catch (error) {
     res.json(error);
   }
-};
-
-const randomIntFromInterval = (min: number, max: number) => {
-  // min and max included
-  return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
 //GET - Nos devuelve un array de preguntas aleatorias con los parametros indicados
@@ -161,21 +101,8 @@ export const getRandomQuestions = async (req: any, res: any) => {
     }
 
     //Seleccionamos la cantidad de preguntas aleatoriamente
-    var questions: {
-      id: string;
-      questionType: string;
-      question: string;
-      Answer: Answer[];
-    }[] = [];
-    var i = 0;
-    do {
-      const index = randomIntFromInterval(0, dbQuestions.length - 1);
-      if (!questions.includes(dbQuestions[index])) {
-        questions.push(dbQuestions[index]);
-        i++;
-      }
-    } while (i < quantity);
-    //devolvemos el array.
+    const questions = await selectRandomQuestions(dbQuestions, quantity);
+
     res.json(questions);
   } catch (error) {
     res.json(error);

@@ -1,6 +1,116 @@
 import axios from "axios";
 import prisma from "../utils/prisma";
 import { createAnswer } from "./answerService";
+import { Answer } from "@prisma/client";
+
+export const connectAllQuestionsWithTrivia = async (
+  Questions: any,
+  createdTrivia: any
+) => {
+  const length = Questions.length;
+  for (var i = 0; i < length; i++) {
+    await connectQuestionWithTrivia(Questions[i].id, createdTrivia.id);
+  }
+};
+
+const randomIntFromInterval = (min: number, max: number) => {
+  // min and max included
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+export const selectRandomQuestions = async (
+  allQuestions: any,
+  quantity: any
+) => {
+  var questions: {
+    id: string;
+    questionType: string;
+    question: string;
+    Answer: Answer[];
+  }[] = [];
+  var i = 0;
+  do {
+    const index = randomIntFromInterval(0, allQuestions.length - 1);
+    if (!questions.includes(allQuestions[index])) {
+      questions.push(allQuestions[index]);
+      i++;
+    }
+  } while (i < quantity);
+  //devolvemos el array.
+  return questions;
+};
+
+export const saveQuestionsToDB = async (
+  questions: any,
+  categoryId: string,
+  difficultyId: string
+) => {
+  const questionsLength = questions.length;
+  var repetidas = 0;
+  for (var i = 0; i < questionsLength; i++) {
+    const createdQuestion = await createQuestion(
+      categoryId,
+      difficultyId,
+      questions[i].type,
+      questions[i].question,
+      questions[i].correct_answer,
+      questions[i].incorrect_answers
+    );
+    if (!createdQuestion) {
+      repetidas++;
+    }
+  }
+  return repetidas;
+};
+
+export const getAvailableQuestionService = async () => {
+  //Traemos todas las preguntas de la db y la almacenamos en un array
+  const dbQuestions = await getAllQuestions();
+
+  //Creamos un array questionsAvailable que sus elementos tienen como atributos la categoria, dificultad y cantidad
+  //Inicializamos con el primer elemento
+  const questionsAvailable = [
+    {
+      id: 1,
+      category: dbQuestions[0].Category.category,
+      difficulty: dbQuestions[0].Difficulty.difficulty,
+      quantity: 1,
+    },
+  ];
+
+  var QAid = 2;
+  const length = dbQuestions.length;
+  //Recorremos las preguntas de la db una por una y comparamos con questionAvailable
+  for (var i = 1; i < length; i++) {
+    var availableLength = questionsAvailable.length;
+    var nuevo = true;
+    for (var j = 0; j < availableLength; j++) {
+      //Si coincide con un elemento sumamos a la cantidad
+      if (
+        dbQuestions[i].Category.category === questionsAvailable[j].category &&
+        dbQuestions[i].Difficulty.difficulty ===
+          questionsAvailable[j].difficulty
+      ) {
+        questionsAvailable[j].quantity++;
+        nuevo = false;
+      }
+    }
+    //Si no coincide con un elemento creamos un nuevo elemento.
+    if (nuevo) {
+      var category = dbQuestions[i].Category.category;
+      var difficulty = dbQuestions[i].Difficulty.difficulty;
+      questionsAvailable.push({
+        id: QAid,
+        category: category,
+        difficulty: difficulty,
+        quantity: 1,
+      });
+      QAid++;
+    }
+  }
+
+  return questionsAvailable;
+};
 
 export const getAllQuestions = async () => {
   const allQuestions = await prisma.question.findMany({

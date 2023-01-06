@@ -1,8 +1,9 @@
-import bcrypt from "bcrypt";
-import { jwtGenerator } from "../utils/jwtGenerator";
 import {
+  checkValidPassword,
   createUser,
+  encryptPassword,
   getAllUsers,
+  getJwtToken,
   getUser,
   updateUser,
 } from "../services/userService";
@@ -21,12 +22,10 @@ export const registerUser = async (req: any, res: any) => {
     }
 
     //Encriptacion de la password
-    const saltRound = 10;
-    const salt = await bcrypt.genSalt(saltRound);
-    const bcryptPassword = await bcrypt.hash(password, salt);
+    const encryptedPassword = await encryptPassword(password);
 
     //Creamos el usuario en la base de datos
-    const createdUser = createUser(username, bcryptPassword);
+    const createdUser = createUser(username, encryptedPassword);
 
     res.json(createdUser);
   } catch (error) {
@@ -49,15 +48,15 @@ export const loginUser = async (req: any, res: any) => {
     //Si existe el usuario
     else {
       //chequeo si la contraseña es la misma que en la base de datos
-      const validPassword = await bcrypt.compare(password, user.password);
+      const validPassword = await checkValidPassword(password, user);
 
       //la contraseña es incorrecta
       if (!validPassword) {
         return res.status(401).json("La contraseña es incorrecta.");
       }
 
-      //devolvemos un jwt
-      const token = jwtGenerator(user.id, user.role);
+      //devolvemos un token
+      const token = await getJwtToken(user);
       res.json({ token });
     }
   } catch (error) {

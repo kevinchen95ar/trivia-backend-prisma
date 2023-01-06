@@ -1,4 +1,4 @@
-import { connectQuestionWithTrivia } from "../services/questionService";
+import { connectAllQuestionsWithTrivia } from "../services/questionService";
 import { createTrivia, getAllTriviaFromDb } from "../services/triviaService";
 
 export const getAllTrivia = async (req: any, res: any) => {
@@ -23,10 +23,7 @@ export const registerTrivia = async (req: any, res: any) => {
     );
 
     //vinculamos la trivia creada con las preguntas utilizadas
-    const length = Questions.length;
-    for (var i = 0; i < length; i++) {
-      await connectQuestionWithTrivia(Questions[i].id, createdTrivia.id);
-    }
+    await connectAllQuestionsWithTrivia(Questions, createdTrivia);
 
     res.json(createdTrivia);
   } catch (error) {
