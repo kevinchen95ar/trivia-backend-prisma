@@ -1,5 +1,5 @@
-import axios from "axios";
 import prisma from "../utils/prisma";
+import { opentdb } from "../interfaces/sourceInterface";
 
 export const getIDCategoryFromCategoriesSourceByCategory = async (
   categories: any,
@@ -50,9 +50,7 @@ export const updateCategoriesService = async (id: string, source: string) => {
 
 export const getCategoriesFromSource = async (source: string) => {
   if (source === "opentdb") {
-    const url = "https://opentdb.com/api_category.php";
-    const data = await axios.get(url);
-    const categories = data.data.trivia_categories;
+    const categories = opentdb.getCategory();
     return categories;
   } else {
     //Otra source y su logica

@@ -1,5 +1,5 @@
-import axios from "axios";
 import prisma from "../utils/prisma";
+import { opentdb } from "../interfaces/sourceInterface";
 import { createAnswer } from "./answerService";
 import { Answer } from "@prisma/client";
 
@@ -158,9 +158,8 @@ export const getQuestionFromSource = async (
   source: string
 ) => {
   if (source === "opentdb") {
-    const url = `https://opentdb.com/api.php?amount=${quantity}&category=${idCategory}&difficulty=${difficulty}`;
-    const data = await axios.get(url);
-    return data.data.results;
+    const data = opentdb.getQuestions(quantity, idCategory, difficulty);
+    return data;
   } else {
     // otra source y su logica
     return;
