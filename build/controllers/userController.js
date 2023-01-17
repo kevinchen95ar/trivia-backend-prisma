@@ -35,33 +35,118 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 exports.__esModule = true;
-exports.registerUser = void 0;
-var prisma_1 = __importDefault(require("../prisma"));
-//TODO: REGISTER
+exports.getAllUsersInDB = exports.updateUserRol = exports.loginUser = exports.registerUser = void 0;
+var userService_1 = require("../services/userService");
+//REGISTER
 var registerUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, username, password, createdUser;
+    var _a, username, password, user, encryptedPassword, createdUser, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
+                _b.trys.push([0, 3, , 4]);
                 _a = req.body, username = _a.username, password = _a.password;
-                return [4 /*yield*/, prisma_1["default"].user.create({
-                        data: {
-                            username: username,
-                            password: password
-                        }
-                    })];
+                return [4 /*yield*/, (0, userService_1.getUser)(username)];
             case 1:
-                createdUser = _b.sent();
+                user = _b.sent();
+                //Si ya existe devolvemos status 409.
+                if (user) {
+                    return [2 /*return*/, res.status(409).send("El nombre de usuario ya existe")];
+                }
+                return [4 /*yield*/, (0, userService_1.encryptPassword)(password)];
+            case 2:
+                encryptedPassword = _b.sent();
+                createdUser = (0, userService_1.createUser)(username, encryptedPassword);
                 res.json(createdUser);
-                return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 3:
+                error_1 = _b.sent();
+                res.json({ error: error_1 });
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); };
 exports.registerUser = registerUser;
-//TODO: LOGIN
-//TODO: UPDATE USER ROL
+//LOGIN
+var loginUser = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, username, password, user, validPassword, token, error_2;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 6, , 7]);
+                _a = req.body, username = _a.username, password = _a.password;
+                return [4 /*yield*/, (0, userService_1.getUser)(username)];
+            case 1:
+                user = _b.sent();
+                if (!!user) return [3 /*break*/, 2];
+                return [2 /*return*/, res.status(409).send("El usuario no existe.")];
+            case 2: return [4 /*yield*/, (0, userService_1.checkValidPassword)(password, user)];
+            case 3:
+                validPassword = _b.sent();
+                //la contraseña es incorrecta
+                if (!validPassword) {
+                    return [2 /*return*/, res.status(401).json("La contraseña es incorrecta.")];
+                }
+                return [4 /*yield*/, (0, userService_1.getJwtToken)(user)];
+            case 4:
+                token = _b.sent();
+                res.json({ token: token });
+                _b.label = 5;
+            case 5: return [3 /*break*/, 7];
+            case 6:
+                error_2 = _b.sent();
+                console.log(error_2);
+                return [3 /*break*/, 7];
+            case 7: return [2 /*return*/];
+        }
+    });
+}); };
+exports.loginUser = loginUser;
+//UPDATE USER ROL
+var updateUserRol = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, id, role, user, error_3;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 2, , 3]);
+                _a = req.body, id = _a.id, role = _a.role;
+                if (role !== "ADMIN" && role !== "BASIC" && role !== "EDITOR") {
+                    return [2 /*return*/, res.json("Rol no permitido.")];
+                }
+                return [4 /*yield*/, (0, userService_1.updateUser)(id, role)];
+            case 1:
+                user = _b.sent();
+                res.json(user);
+                return [3 /*break*/, 3];
+            case 2:
+                error_3 = _b.sent();
+                res.json(error_3);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); };
+exports.updateUserRol = updateUserRol;
+// FETCH ALL USERS
+var getAllUsersInDB = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var allUsers, error_4;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, (0, userService_1.getAllUsers)()];
+            case 1:
+                allUsers = _a.sent();
+                res.json(allUsers);
+                return [3 /*break*/, 3];
+            case 2:
+                error_4 = _a.sent();
+                console.log(error_4);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); };
+exports.getAllUsersInDB = getAllUsersInDB;
 //# sourceMappingURL=userController.js.map

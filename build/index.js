@@ -23,6 +23,4 @@ var PORT = 4000;
 app.listen(PORT, function () {
     console.log("Server running on port ".concat(PORT));
 });
-//TODO: armar bien el server y dsp armar las rutas
-//TODO: al armar las rutas, dsp armar los services y controllers
 //# sourceMappingURL=index.js.map
