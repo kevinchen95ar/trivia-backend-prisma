@@ -1,5 +1,5 @@
 import prisma from "../utils/prisma";
-import { opentdb } from "../interfaces/sourceInterface";
+import { newSourceBySourceName } from "./sourceService";
 
 export const getIDCategoryFromCategoriesSourceByCategory = async (
   categories: any,
@@ -29,33 +29,32 @@ export const updateCategoriesService = async (id: string, source: string) => {
   //Traemos las categories de la source solicitada
   const sourceCategories = await getCategoriesFromSource(source);
 
-  //Comparamos las categories de la db y la source
-  var newCategories = [];
-  const sourceLength = sourceCategories.length;
-  for (var i = 0; i < sourceLength; i++) {
-    //Chequeamos que si ya existe esa categoria, si no existe la insertamos en el array
-    if (!dbCategories.includes(sourceCategories[i].name)) {
-      newCategories.push(sourceCategories[i].name);
+  //Si no es un array vacio
+  if (sourceCategories.length !== 0) {
+    //Comparamos las categories de la db y la source
+    var newCategories = [];
+    const sourceLength = sourceCategories.length;
+    for (var i = 0; i < sourceLength; i++) {
+      //Chequeamos que si ya existe esa categoria, si no existe la insertamos en el array
+      if (!dbCategories.includes(sourceCategories[i].name)) {
+        newCategories.push(sourceCategories[i].name);
+      }
     }
-  }
 
-  //Guardamos solo las que no se repiten
-  const newLength = newCategories.length;
-  if (newLength !== 0) {
-    for (var i = 0; i < newLength; i++) {
-      await createCategory(newCategories[i], id);
+    //Guardamos solo las que no se repiten
+    const newLength = newCategories.length;
+    if (newLength !== 0) {
+      for (var i = 0; i < newLength; i++) {
+        await createCategory(newCategories[i], id);
+      }
     }
   }
 };
 
 export const getCategoriesFromSource = async (source: string) => {
-  if (source === "opentdb") {
-    const categories = opentdb.getCategory();
-    return categories;
-  } else {
-    //Otra source y su logica
-    return;
-  }
+  const newSource = newSourceBySourceName(source);
+  const categories = await newSource.getCategory();
+  return categories;
 };
 
 export const getCategoriesBySourceID = async (id: string) => {

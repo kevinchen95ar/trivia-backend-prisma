@@ -1,7 +1,7 @@
 import prisma from "../utils/prisma";
-import { opentdb } from "../interfaces/sourceInterface";
 import { createAnswer } from "./answerService";
 import { Answer } from "@prisma/client";
+import { newSourceBySourceName } from "./sourceService";
 
 export const connectAllQuestionsWithTrivia = async (
   Questions: any,
@@ -157,13 +157,13 @@ export const getQuestionFromSource = async (
   difficulty: string,
   source: string
 ) => {
-  if (source === "opentdb") {
-    const data = opentdb.getQuestions(quantity, idCategory, difficulty);
-    return data;
-  } else {
-    // otra source y su logica
-    return;
-  }
+  const newSource = newSourceBySourceName(source);
+  const questions = await newSource.getQuestions(
+    quantity,
+    idCategory,
+    difficulty
+  );
+  return questions;
 };
 
 export const createQuestion = async (
