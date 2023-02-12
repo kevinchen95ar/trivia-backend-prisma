@@ -18,6 +18,6 @@ app.use(router);
 app.use(cors(corsOptions));
 
 const PORT = 4000;
-app.listen(PORT, () => {
+app.listen(process.env.PORT || PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
